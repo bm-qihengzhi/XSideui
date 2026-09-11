@@ -10,14 +10,14 @@ QLineEdit#xlineedit {
 
 
 QLineEdit#xlineedit[input-size="large"] {
-    padding: 0px {spacing_xl};
+    padding: 0px {spacing_s};
     font-size: {font_size_l};
     border-radius: {radius_l};
     min-height:{height_large}
 }
 
 QLineEdit#xlineedit[input-size="default"] {
-    padding: 0px {spacing_l};
+    padding: 0px {spacing_s};
     font-size: {font_size_m};
     border-radius: {radius_m};
     min-height:{height_default}
@@ -32,7 +32,7 @@ QLineEdit#xlineedit[input-size="small"] {
 }
 
 QLineEdit#xlineedit[input-size="mini"] {
-    padding: 0px {spacing_xs};
+    padding: 0px {spacing_s};
     font-size: {font_size_xs};
     border-radius: {radius_s};
     min-height:{height_mini}

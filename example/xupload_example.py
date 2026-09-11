@@ -34,6 +34,7 @@ class XUploadDemo(XWidget):
         upload = XUpload(
             mode=XUpload.MODE_BOTH,
             mini_height=200,
+            icon_size= 32,
             title='测试上次区域',
             description='拓展文件到此区域',
         )

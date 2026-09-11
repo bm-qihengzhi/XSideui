@@ -60,7 +60,7 @@ class QSSLoader:
             with open(file_path, 'r', encoding='utf-8') as f:
                 qss = f.read()
         else:
-            qss = _resources.read_text('xsideui.theme.qss', qss_file)
+            qss = _resources.read_text(f"{__package__}.qss", qss_file)
         
         # 替换变量（使用正则表达式一次性替换）
         if variables:
@@ -201,7 +201,7 @@ class QSSLoader:
         if self._qss_dir:
             qss_files = [f for f in os.listdir(self._qss_dir) if f.endswith('.qss')]
         else:
-            qss_files = [f for f in _resources.contents('xsideui.theme.qss') if f.endswith('.qss')]
+            qss_files = [f for f in _resources.contents(f"{__package__}.qss") if f.endswith('.qss')]
 
         # 检查 base.qss
         if 'base.qss' in qss_files:

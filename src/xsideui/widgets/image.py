@@ -173,15 +173,16 @@ class XImage(QFrame):
         if not self._original_pixmap:
             return
 
-        file_path, _ = QFileDialog.getSaveFileName(
-            self,
-            "保存图片",
-            "",
-            "PNG 文件 (*.png);;JPEG 文件 (*.jpg);;所有文件 (*.*)"
-        )
+        dialog = QFileDialog(self)
+        dialog.setWindowModality(Qt.WindowModal)
+        dialog.setAcceptMode(QFileDialog.AcceptSave)
+        dialog.setWindowTitle("保存图片")
+        dialog.setNameFilter("PNG 文件 (*.png);;JPEG 文件 (*.jpg);;所有文件 (*.*)")
 
-        if file_path:
-            self._original_pixmap.save(file_path)
+        if dialog.exec_():
+            paths = dialog.selectedFiles()
+            if paths:
+                self._original_pixmap.save(paths[0])
 
     def _copy_image(self):
         """复制图片到剪贴板"""

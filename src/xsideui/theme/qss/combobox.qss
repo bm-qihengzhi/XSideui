@@ -64,14 +64,44 @@ QComboBox#xcombobox::drop-down {
     width: 0px;
 }
 
+/* 可编辑搜索框的输入区域 */
+QComboBox#xcombobox QLineEdit {
+    background: transparent;
+    border: none;
+}
+
+/* 搜索补全弹层 */
+QListView#xcombobox-search-popup {
+    background-color: {bg_2};
+    border: 1px solid {border};
+    border-radius: {radius_m};
+    outline: none;
+    padding: 2px 0;
+}
+
+QListView#xcombobox-search-popup::item {
+    padding: {spacing_s} {spacing_m};
+    color: {text_1};
+    background-color: transparent;
+}
+
+QListView#xcombobox-search-popup::item:hover {
+    background-color: {fill_alpha_3};
+}
+
+QListView#xcombobox-search-popup::item:selected {
+    background-color: {primary_alpha_1};
+    color: {primary};
+}
+
 /* 箭头标签 */
-QLabel#xcombobox-arrow {
+QPushButton#xcombobox-arrow {
     border: none;
     background-color: transparent;
     padding: 2px;
 }
 
-QLabel#xcombobox-arrow:hover {
+QPushButton#xcombobox-arrow:hover {
     background-color: {fill_alpha_2};
     border-radius: {radius_s};
 }
@@ -90,12 +120,6 @@ QComboBox#xcombobox QAbstractItemView::item {
     padding: {spacing_s} {spacing_m};
     color: {text_1};
     background-color: transparent;
-}
-
-/* 下拉列表项图标 */
-QComboBox#xcombobox[deletable="true"] QAbstractItemView::item::icon {
-    width: 16px;
-    height: 16px;
 }
 
 /* 下拉列表项悬停 */

@@ -8,11 +8,24 @@ from ..xenum import XColor
 from .label import XLabel
 
 
+_HOVER_MARGIN = 4
+
+
+def _resolve_hover_radius() -> int:
+    """从主题解析按钮 hover 背景圆角（radius_s），失败回退 4px"""
+    try:
+        return int(str(theme_manager.border_radius.get("s", "4px")).replace("px", "").strip())
+    except (ValueError, TypeError):
+        return 4
+
+
 class _TitleBarButton(QPushButton):
-    def __init__(self, icon_name, is_close=False, parent=None):
+    def __init__(self, icon_name, is_close=False, parent=None, rounded=False):
         super().__init__(parent)
         self._icon_name = icon_name
         self._is_close = is_close
+        self._rounded = rounded
+        self._hover_radius = _resolve_hover_radius() if rounded else 0
         self.setFixedSize(36, 36)
         self.setIconSize(QSize(16, 16))
         self.setCursor(Qt.PointingHandCursor)
@@ -27,16 +40,32 @@ class _TitleBarButton(QPushButton):
         p.setRenderHint(QPainter.Antialiasing, False)
         rect = self.rect()
 
+        bg = None
         if self._is_close:
             if self.isDown():
-                p.fillRect(rect, QColor("#f1707a"))
+                bg = QColor("#f1707a")
             elif self.underMouse():
-                p.fillRect(rect, QColor("#e81123"))
+                bg = QColor("#e81123")
         else:
             if self.isDown():
-                p.fillRect(rect, QColor(128, 128, 128, 40))
+                bg = QColor(128, 128, 128, 40)
             elif self.underMouse():
-                p.fillRect(rect, QColor(128, 128, 128, 25))
+                bg = QColor(128, 128, 128, 25)
+
+        if bg is not None:
+            if self._rounded:
+                p.setRenderHint(QPainter.Antialiasing, True)
+                p.setPen(Qt.NoPen)
+                p.setBrush(bg)
+                m = _HOVER_MARGIN
+                p.drawRoundedRect(
+                    rect.adjusted(m, m, -m, -m),
+                    self._hover_radius,
+                    self._hover_radius,
+                )
+                p.setRenderHint(QPainter.Antialiasing, False)
+            else:
+                p.fillRect(rect, bg)
 
         if self._is_close and (self.underMouse() or self.isDown()):
             color = "#FFFFFF"
@@ -68,6 +97,7 @@ class XTitleBar(QFrame):
         show_max: bool = True,
         show_close: bool = True,
         show_dark: bool = True,
+        rounded_buttons: bool = False,
         parent=None
     ):
         """初始化标题栏
@@ -79,6 +109,7 @@ class XTitleBar(QFrame):
             show_max: 是否显示最大化按钮
             show_dark: 是否显示明暗主题切换按钮
             show_close: 是否显示关闭按钮
+            rounded_buttons: 窗口控制按钮 hover 背景是否使用内缩圆角
             parent: 父组件
         """
         super().__init__(parent)
@@ -89,6 +120,7 @@ class XTitleBar(QFrame):
         self._show_max = show_max
         self._show_dark = show_dark
         self._show_close = show_close
+        self._rounded_buttons = rounded_buttons
         self._drag_pos = QPoint()
         self._is_dragging = False
         self.setMinimumHeight(36)
@@ -144,22 +176,22 @@ class XTitleBar(QFrame):
     def _setup_window_buttons(self):
         if self._show_dark:
             icon_name = IconName.MOON if theme_manager.is_dark else IconName.SUN
-            self.theme_btn = _TitleBarButton(icon_name, parent=self)
+            self.theme_btn = _TitleBarButton(icon_name, parent=self, rounded=self._rounded_buttons)
             self.theme_btn.clicked.connect(self._toggle_theme)
             self.right_layout.addWidget(self.theme_btn)
 
         if self._show_min:
-            self.min_button = _TitleBarButton(IconName.MINUS, parent=self)
+            self.min_button = _TitleBarButton(IconName.MINUS, parent=self, rounded=self._rounded_buttons)
             self.min_button.clicked.connect(self.windowMinimumed.emit)
             self.right_layout.addWidget(self.min_button)
 
         if self._show_max:
-            self.max_button = _TitleBarButton(IconName.FULL_SCREEN, parent=self)
+            self.max_button = _TitleBarButton(IconName.FULL_SCREEN, parent=self, rounded=self._rounded_buttons)
             self.max_button.clicked.connect(self._toggle_maximize)
             self.right_layout.addWidget(self.max_button)
 
         if self._show_close:
-            self.close_button = _TitleBarButton(IconName.CLOSE, is_close=True, parent=self)
+            self.close_button = _TitleBarButton(IconName.CLOSE, is_close=True, parent=self, rounded=self._rounded_buttons)
             self.close_button.clicked.connect(self.windowClosed.emit)
             self.right_layout.addWidget(self.close_button)
 

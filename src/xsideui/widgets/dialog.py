@@ -1,5 +1,5 @@
 from ..utils.qt_compat import QWidget, QDialog, QVBoxLayout, QFrame, QGraphicsDropShadowEffect, QSizeGrip, QColor, \
-    QIcon, Qt, QTimer, QEvent
+    QIcon, Qt, QTimer, QEvent, QApplication, QCursor
 from .title_bar import XTitleBar
 
 
@@ -23,7 +23,7 @@ class XDialog(QDialog):
                 show_close: 是否显示标题栏右侧的关闭按钮。
                 parent: 父窗口。设置后对话框将以模态或非模态形式依附于父窗口。
             """
-        self.setObjectName("XDialog")
+        self.setObjectName("xdialog")
         self._title = title
         self._logo = logo
         self._show_close = show_close
@@ -50,12 +50,12 @@ class XDialog(QDialog):
         self.shadow_frame.setObjectName("shadow-frame")
         self.root_layout.addWidget(self.shadow_frame)
 
-        # 添加阴影效果
-        shadow = QGraphicsDropShadowEffect(self)
-        shadow.setBlurRadius(12)
-        shadow.setOffset(0, 4)
-        shadow.setColor(QColor(0, 0, 0, 30))
-        self.shadow_frame.setGraphicsEffect(shadow)
+        # 添加阴影效果（只创建一次，调整大小时通过 enabled 开关复用）
+        self._shadow = QGraphicsDropShadowEffect(self)
+        self._shadow.setBlurRadius(12)
+        self._shadow.setOffset(0, 4)
+        self._shadow.setColor(QColor(0, 0, 0, 30))
+        self.shadow_frame.setGraphicsEffect(self._shadow)
 
         # 内容区域 (业务组件放在这里)
         self.content_layout = QVBoxLayout(self.shadow_frame)
@@ -90,7 +90,7 @@ class XDialog(QDialog):
         self.content_layout.addLayout(layout, 1)
         return self
 
-    def set_title(self, title: str) -> 'QDialog':
+    def set_title(self, title: str) -> 'XDialog':
         """设置窗口标题
 
         Args:
@@ -104,7 +104,7 @@ class XDialog(QDialog):
         self.title_bar.set_title(title)
         return self
 
-    def set_logo(self, icon) -> 'QDialog':
+    def set_logo(self, icon) -> 'XDialog':
         """设置窗口图标
 
         Args:
@@ -121,7 +121,7 @@ class XDialog(QDialog):
         self.title_bar.set_logo(icon)
         return self
 
-    def hide_title_bar(self) -> 'QDialog':
+    def hide_title_bar(self) -> 'XDialog':
         """隐藏标题栏
 
         Returns:
@@ -130,7 +130,7 @@ class XDialog(QDialog):
         self.title_bar.hide()
         return self
 
-    def hide_minimize_button(self) -> 'QDialog':
+    def hide_minimize_button(self) -> 'XDialog':
         """隐藏最小化按钮
 
         Returns:
@@ -140,7 +140,7 @@ class XDialog(QDialog):
             self.title_bar.min_button.hide()
         return self
 
-    def hide_maximize_button(self) -> 'QDialog':
+    def hide_maximize_button(self) -> 'XDialog':
         """隐藏最大化按钮
 
         Returns:
@@ -150,7 +150,7 @@ class XDialog(QDialog):
             self.title_bar.max_button.hide()
         return self
 
-    def hide_theme_button(self) -> 'QDialog':
+    def hide_theme_button(self) -> 'XDialog':
         """隐藏主题切换按钮
 
         Returns:
@@ -169,6 +169,7 @@ class XDialog(QDialog):
             show_max=False,
             show_close=self._show_close,
             show_dark=False,
+            rounded_buttons=True,
             parent=self
         )
 
@@ -201,30 +202,31 @@ class XDialog(QDialog):
 
     def showEvent(self, event):
         super().showEvent(event)
+        geo = self.frameGeometry()
         p = self.parent()
         if p:
             parent_center = p.mapToGlobal(p.rect().center())
-            geo = self.frameGeometry()
-            geo.moveCenter(parent_center)
-            self.move(geo.topLeft())
+        else:
+            screen = QApplication.screenAt(QCursor.pos()) or QApplication.primaryScreen()
+            if not screen:
+                return
+            parent_center = screen.availableGeometry().center()
+        geo.moveCenter(parent_center)
+        self.move(geo.topLeft())
 
     def resizeEvent(self, event):
-        # 在调整大小开始时，暂时移除阴影效果，减少 CPU 负担
-        if self.shadow_frame.graphicsEffect():
-            self.shadow_frame.setGraphicsEffect(None)
+        # 在调整大小开始时，暂时禁用阴影效果，减少 CPU 负担
+        if self._shadow.isEnabled():
+            self._shadow.setEnabled(False)
         super().resizeEvent(event)
         QTimer.singleShot(100, self._restore_shadow)
 
         self._update_grips_position()
 
     def _restore_shadow(self):
-        # 重新添加阴影效果
-        if not self.shadow_frame.graphicsEffect():
-            shadow = QGraphicsDropShadowEffect(self)
-            shadow.setBlurRadius(12)
-            shadow.setOffset(0, 4)
-            shadow.setColor(QColor(0, 0, 0, 30))
-            self.shadow_frame.setGraphicsEffect(shadow)
+        # 重新启用阴影效果
+        if not self._shadow.isEnabled():
+            self._shadow.setEnabled(True)
 
     def eventFilter(self, obj, event):
         """事件过滤器，处理标题栏的鼠标事件

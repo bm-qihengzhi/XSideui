@@ -4,14 +4,13 @@ XComboBox Example 下拉框组件示例
 """
 import sys
 
-from xsideui import XI18N, XPushButton
 
 try:
     from PySide2.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout
 except ImportError:
     from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout
 
-from src.xsideui import XLabel, XComboBox, XSize, XWidget, XDivider,  IconName, XIcon, XColor
+from src.xsideui import XLabel, XComboBox, XSize, XWidget, XDivider,  IconName, XIcon, XColor, XI18N, XPushButton
 
 
 
@@ -37,7 +36,7 @@ class XComboBoxExample(XWidget):
 
         main_layout.addWidget(XLabel("Default", style=XLabel.Style.H3))
         main_layout.addWidget(XDivider())
-        combo_box = XComboBox(border_visible=False)
+        combo_box = XComboBox(searchable=True)
         combo_box.addItems(items)
         main_layout.addWidget(combo_box)
 

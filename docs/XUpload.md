@@ -35,6 +35,7 @@ XUpload(
     accept_types: List[str] = None,     # 文件类型列表
     max_size: int = -1,                 # 最大文件大小（字节）
     mini_height: int = 200,             # 最小高度（像素）
+    icon_size: int = 48,                # 上传图标尺寸（像素）
     show_border: bool = True,           # 是否显示边框
     parent: QWidget = None,
 )
@@ -153,3 +154,4 @@ python example/xupload_example.py
 2. 文件大小限制为单个文件，非总大小
 3. 混合模式下拖拽文件夹会提取所有子文件
 4. 扫描过程中会显示"解析路径中..."状态
+5. 拖入路径类型与 `mode` 不匹配时（如文件夹模式拖入文件），不会启动扫描，并通过 `file_error` 发出提示

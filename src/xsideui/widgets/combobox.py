@@ -1,6 +1,6 @@
-from typing import Union, Any
+from typing import Union
 
-from ..utils.qt_compat import (QComboBox, QListView, QWidget, Qt, QEvent)
+from ..utils.qt_compat import (QComboBox, QCompleter, QListView, QWidget, Qt, QEvent, QIcon, QStyledItemDelegate, QTimer)
 from .xarrowbutton import XArrowButton
 from ..icon import IconName
 from ..xenum import XSize
@@ -14,6 +14,7 @@ class XComboBox(QComboBox):
             self,
             size: Union[XSize, str] = XSize.DEFAULT,
             border_visible: bool = True,
+            searchable: bool = False,
             parent=None
     ):
         """初始化下拉框组件。
@@ -22,22 +23,61 @@ class XComboBox(QComboBox):
                 size: 组件的尺寸规格。影响输入框高度、字体大小以及下拉箭头的大小。
                     支持 XSize 枚举或字符串（'small', 'default', 'large'）。
                 border_visible: 是否显示外边框。设为 False 时通常用于表格嵌入或紧凑型 UI。
+                searchable: 是否支持输入搜索。设为 True 时组件变为可编辑并启用自动补全过滤。
                 parent: 父级组件。
             """
         super().__init__(parent)
         self.setObjectName("xcombobox")
         self._size_value = self._parse_size(size)
         self._show_border = border_visible
+        self._searchable = searchable
         self._item_keys = []  # 存储选项的翻译键
         self._set_listview()
         self._setup_arrow()
+        if searchable:
+            self._setup_search()
         self._update_style()
 
+
+    def _setup_search(self):
+        """启用输入搜索：可编辑 + 自动补全过滤"""
+        self.setEditable(True)
+        self.setInsertPolicy(QComboBox.NoInsert)
+
+        self._completer = QCompleter(self.model(), self)
+        self._completer.setCaseSensitivity(Qt.CaseInsensitive)
+        self._completer.setFilterMode(Qt.MatchContains)
+        self._completer.setCompletionMode(QCompleter.PopupCompletion)
+        self.setCompleter(self._completer)
+
+        popup = self._completer.popup()
+        if popup:
+            popup.setObjectName("xcombobox-search-popup")
+            # 使用 QStyledItemDelegate，使 QSS 的 ::item 规则（内边距/悬停/选中）生效
+            popup.setItemDelegate(QStyledItemDelegate(popup))
+            # 去掉原生阴影，与下拉列表样式一致
+            popup.setWindowFlags(popup.windowFlags() | Qt.NoDropShadowWindowHint)
+            popup.installEventFilter(self)
+
+        self.lineEdit().setPlaceholderText("搜索...")
+        self.lineEdit().installEventFilter(self)
+        self._arrow_btn.clicked.connect(self._open_search_popup)
+        self.setCurrentIndex(-1)
+
+    def _open_search_popup(self):
+        """点击触发：清空当前选中并弹出全部选项，提示可搜索"""
+        if self.currentIndex() >= 0:
+            self.lineEdit().clear()
+            self.setCurrentIndex(-1)
+        self._completer.setCompletionPrefix('')
+        self._completer.complete()
 
     def _setup_arrow(self):
         """设置自定义箭头标签"""
         self._arrow_btn = XArrowButton(icon_name=IconName.DOWN, parent=self)
-        self._arrow_btn.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self._arrow_btn.setObjectName("xcombobox-arrow")
+        if not self._searchable:
+            self._arrow_btn.setAttribute(Qt.WA_TransparentForMouseEvents)
         self._arrow_btn.show()
 
     def _update_button_positions(self):
@@ -50,7 +90,10 @@ class XComboBox(QComboBox):
         self._arrow_btn.move(w - btn_size - 6, margin)
         self._arrow_btn.raise_()
         right_padding = btn_size + 10
-        self.setStyleSheet(f"QComboBox {{ padding-right: {right_padding}px; }}")
+        if self._searchable and self.lineEdit():
+            self.lineEdit().setTextMargins(0, 0, right_padding, 0)
+        else:
+            self.setStyleSheet(f"QComboBox#xcombobox {{ padding-right: {right_padding}px; }}")
 
 
 
@@ -73,7 +116,7 @@ class XComboBox(QComboBox):
     def _update_style(self):
         """更新样式属性"""
         # 这里的 QSS 也可以根据 self._size_value 动态微调文字大小和内边距
-        border = "1px solid {border}" if self._show_border else "none"
+        border = "none" if not self._show_border else "visible"
         self.setProperty("borderVisible", border)
         self.setProperty("componentSize", self._size_value)
         # 强制刷新样式
@@ -122,7 +165,7 @@ class XComboBox(QComboBox):
         self._update_style()
         return self
 
-    def size(self) -> str:
+    def get_size(self) -> str:
         """获取当前尺寸
 
         Returns:
@@ -130,17 +173,22 @@ class XComboBox(QComboBox):
         """
         return self._size_value
 
-    def addItem(self, icon: object = None, text: str = "", userData: Any = None):
+    def addItem(self, icon=None, text=None, userData=None):
         """
-        添加选项
+        添加选项（兼容 Qt 原生两种调用形式）
 
         Args:
-            icon: 图标（可选）
-            text: 选项文本或翻译键
+            icon: 图标（QIcon 或图标路径）。调用 addItem(text) 时忽略。
+            text: 选项文本或翻译键。当 icon 为 str 时按 addItem(text) 处理。
             userData: 用户数据（可选）
         """
+        if text is None and isinstance(icon, str):
+            text = icon
+            icon = None
+        if text is None:
+            text = ""
         self._item_keys.append(text)
-        translated =  XI18N.x_tr(text)
+        translated = XI18N.x_tr(text)
 
         if icon:
             super().addItem(icon, translated, userData)
@@ -174,6 +222,16 @@ class XComboBox(QComboBox):
                 translated = XI18N.x_tr(text_key)
                 self.setItemText(i, translated)
 
+
+    def eventFilter(self, obj, event):
+        """搜索模式下点击输入框时打开下拉列表并清空选中；弹层显示时向下偏移留间距"""
+        if self._searchable:
+            if obj is self.lineEdit() and event.type() == QEvent.MouseButtonPress:
+                self._open_search_popup()
+            elif obj is self._completer.popup() and event.type() == QEvent.Show:
+                popup = obj
+                QTimer.singleShot(0, lambda p=popup: p.move(p.x(), p.y() + 6))
+        return super().eventFilter(obj, event)
 
     def changeEvent(self, event):
         """显式捕获事件"""

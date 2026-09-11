@@ -39,9 +39,9 @@ class ThemeRegistry:
         """加载内置主题"""
         try:
             light_config = json.loads(
-                _resources.read_text('xsideui.theme.color_json', 'light.json'))
+                _resources.read_text(f"{__package__}.color_json", 'light.json'))
             dark_config = json.loads(
-                _resources.read_text('xsideui.theme.color_json', 'dark.json'))
+                _resources.read_text(f"{__package__}.color_json", 'dark.json'))
 
             self.register_theme(
                 ThemeConfig(

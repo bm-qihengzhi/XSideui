@@ -18,6 +18,7 @@ from xsideui import XComboBox
 |------|------|--------|------|
 | `size` | XSize 或 str | XSize.DEFAULT | 组件尺寸 |
 | `border_visible` | bool | True | 是否显示边框 |
+| `searchable` | bool | False | 是否支持输入搜索（可编辑+自动补全） |
 | `parent` | QWidget | None | 父组件 |
 
 ## 方法
@@ -26,7 +27,7 @@ from xsideui import XComboBox
 |------|------|--------|
 | `set_border_visible(visible)` | 设置边框可见性 | XComboBox |
 | `set_size(size)` | 设置组件尺寸 | XComboBox |
-| `size()` | 获取当前尺寸 | str |
+| `get_size()` | 获取当前尺寸 | str |
 
 ## 示例
 
@@ -41,6 +42,10 @@ combo.addItem("选项3")
 
 # 批量添加
 combo.addItems(["选项1", "选项2", "选项3"])
+
+# 带图标添加（兼容 Qt 原生调用形式）
+icon = XIcon(IconName.APP, size=16, color=XColor.PRIMARY).icon()
+combo.addItem(icon, "选项4")
 ```
 
 ```python
@@ -98,10 +103,22 @@ print(f"找到索引: {index}")
 combo.setEnabled(False)
 ```
 
+```python
+# 支持输入搜索（可编辑 + 自动补全）
+combo = XComboBox(searchable=True)
+combo.addItems(["小炒黄牛肉", "生烧排骨", "皮蛋擂辣椒", "Primary"])
+
+# 输入时下拉列表会按包含匹配实时过滤（大小写不敏感）
+# 无匹配时 currentIndex() 为 -1
+# 点击输入框会清空当前选中并弹出全部选项（占位符「搜索...」提示可搜索），光标在输入框内闪烁
+combo.currentIndexChanged.connect(lambda idx: print(f"选中: {combo.itemText(idx)}"))
+```
+
 ## 特性
 
 - ✅ 四种尺寸（large/default/small/mini）
 - ✅ 边框显示/隐藏
+- ✅ 输入搜索（可编辑+自动补全过滤）
 - ✅ 自定义下拉箭头图标
 - ✅ 禁用状态
 - ✅ 主题适配

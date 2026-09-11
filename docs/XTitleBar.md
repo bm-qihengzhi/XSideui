@@ -18,6 +18,7 @@ from xsideui import XTitleBar
 | `show_max` | bool | True | 是否显示最大化按钮 |
 | `show_close` | bool | True | 是否显示关闭按钮 |
 | `show_dark` | bool | True | 是否显示明暗主题切换按钮 |
+| `rounded_buttons` | bool | False | 窗口控制按钮 hover 背景是否使用内缩圆角（XDialog 使用） |
 | `parent` | QWidget | None | 父组件 |
 
 ## 方法
