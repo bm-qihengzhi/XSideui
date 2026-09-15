@@ -2,9 +2,10 @@ from pathlib import Path
 from typing import List, Optional
 
 from .. import XIcon
-from ..utils.qt_compat import (QDragEnterEvent, QDropEvent, QMouseEvent, QDragMoveEvent,QWidget, QVBoxLayout, QFileDialog,QThread, Signal, Qt, QSize, QFileInfo)
+from ..utils.qt_compat import (QDragEnterEvent, QDropEvent, QMouseEvent, QDragMoveEvent,QWidget, QVBoxLayout, QFileDialog,QThread, Signal, Qt, QSize, QFileInfo, QCursor)
 from .label import XLabel
 from .pushbutton import XPushButton
+from .menu import XMenu
 from ..icon import IconName
 from ..xenum import XButtonVariant, XSize
 from ..theme import theme_manager
@@ -40,9 +41,9 @@ class FileProcessThread(QThread):
         """运行文件扫描任务
 
         遍历所有路径，根据模式处理文件或文件夹：
-        - 文件夹模式：递归扫描所有子文件
+        - 文件夹模式：返回文件夹路径本身
         - 文件模式：直接处理文件
-        - 混合模式：自动判断并处理
+        - 混合模式：文件直接处理，文件夹返回路径本身
 
         使用分批发送机制（每200个文件发送一次）防止主线程阻塞
         """
@@ -52,18 +53,14 @@ class FileProcessThread(QThread):
         for p in self.raw_paths:
             path = Path(p)
             try:
-                # 处理文件夹模式
+                # 文件夹模式 / 混合模式：返回文件夹路径本身（不展开子文件）
                 if path.is_dir() and self.mode in (1, 2):
-                    for child in path.rglob("*"):
-                        if self.isInterruptionRequested():
-                            return
-                        if child.is_file() and self._check_file(child):
-                            pending_list.append(str(child))
-                            if len(pending_list) >= self._chunk_size:
-                                self.files_chunk_processed.emit(pending_list)
-                                total_count += len(pending_list)
-                                pending_list = []
-                                self.msleep(5)  # 极短交还CPU控制权，维持UI流畅度
+                    pending_list.append(str(path))
+                    if len(pending_list) >= self._chunk_size:
+                        self.files_chunk_processed.emit(pending_list)
+                        total_count += len(pending_list)
+                        pending_list = []
+                        self.msleep(5)  # 极短交还CPU控制权，维持UI流畅度
 
                 # 处理文件模式
                 elif path.is_file() and self.mode in (0, 2):
@@ -339,30 +336,54 @@ class XUpload(QWidget):
             self.drop_area.style().polish(self.drop_area)
 
     def _open_file_dialog(self):
-        """打开文件选择对话框
+        """打开选择对话框
 
         根据当前模式显示不同的对话框：
         - 文件夹模式：显示文件夹选择对话框
         - 文件模式：显示多文件选择对话框
+        - 混合模式：先选择“文件”或“文件夹”，再打开对应对话框
         """
+        if self._mode == self.MODE_BOTH:
+            self._pick_both()
+        elif self._mode == self.MODE_FOLDERS:
+            self._browse_folders()
+        else:
+            self._browse_files()
+
+    def _browse_folders(self):
+        """打开文件夹选择对话框"""
         dialog = QFileDialog(self)
         dialog.setWindowModality(Qt.WindowModal)
-        if self._mode == self.MODE_FOLDERS:
-            dialog.setWindowTitle("选择文件夹")
-            dialog.setFileMode(QFileDialog.Directory)
-            dialog.setOption(QFileDialog.ShowDirsOnly, True)
-            if dialog.exec_():
-                paths = dialog.selectedFiles()
-                if paths:
-                    self._start_scan([paths[0]])
-        else:
-            dialog.setWindowTitle("选择文件")
-            dialog.setFileMode(QFileDialog.ExistingFiles)
-            dialog.setNameFilter(self._get_dialog_filter())
-            if dialog.exec_():
-                files = dialog.selectedFiles()
-                if files:
-                    self._start_scan(files)
+        dialog.setWindowTitle("选择文件夹")
+        dialog.setFileMode(QFileDialog.Directory)
+        dialog.setOption(QFileDialog.ShowDirsOnly, True)
+        if dialog.exec_():
+            paths = dialog.selectedFiles()
+            if paths:
+                self._start_scan([paths[0]])
+
+    def _browse_files(self):
+        """打开多文件选择对话框"""
+        dialog = QFileDialog(self)
+        dialog.setWindowModality(Qt.WindowModal)
+        dialog.setWindowTitle("选择文件")
+        dialog.setFileMode(QFileDialog.ExistingFiles)
+        dialog.setNameFilter(self._get_dialog_filter())
+        if dialog.exec_():
+            files = dialog.selectedFiles()
+            if files:
+                self._start_scan(files)
+
+    def _pick_both(self):
+        """混合模式：让用户选择文件或文件夹"""
+        menu = XMenu(parent=self)
+        act_file = menu.add_action("选择文件…")
+        act_folder = menu.add_action("选择文件夹…")
+        chosen = menu.exec_(QCursor.pos())
+        if chosen == act_file:
+            self._browse_files()
+        elif chosen == act_folder:
+            self._browse_folders()
 
     def _start_scan(self, paths: List[str]):
         """启动文件扫描任务

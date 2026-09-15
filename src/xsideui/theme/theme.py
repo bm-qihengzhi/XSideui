@@ -24,6 +24,9 @@ from .qss_loader import qss_loader
 from .thmem_config import ThemeConfig
 from .theme_types import ThemeColors, ThemeType
 
+# 资源子包名：用 __name__ 推导（zipimport 环境下 __package__ 可能为 None）
+_RESOURCES_PKG = __name__.rsplit('.', 1)[0]
+
 
 class ThemeRegistry:
     """主题注册表
@@ -39,9 +42,9 @@ class ThemeRegistry:
         """加载内置主题"""
         try:
             light_config = json.loads(
-                _resources.read_text(f"{__package__}.color_json", 'light.json'))
+                _resources.read_text(f"{_RESOURCES_PKG}.color_json", 'light.json'))
             dark_config = json.loads(
-                _resources.read_text(f"{__package__}.color_json", 'dark.json'))
+                _resources.read_text(f"{_RESOURCES_PKG}.color_json", 'dark.json'))
 
             self.register_theme(
                 ThemeConfig(

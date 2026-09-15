@@ -12,6 +12,30 @@ import importlib.resources as _resources
 
 from .thmem_config import ThemeConfig
 
+# 资源子包名：用 __name__ 推导（zipimport 环境下 __package__ 可能为 None）
+_RESOURCES_PKG = __name__.rsplit('.', 1)[0]
+
+# 内置 QSS 文件清单（zipimport 打包环境无法用 importlib.resources.contents 枚举时兜底）
+_QSS_FILES = (
+    'avatar.qss', 'card.qss', 'carousel.qss', 'checkbox.qss',
+    'codeblock.qss', 'collapse.qss', 'combobox.qss', 'dialog.qss',
+    'divider.qss', 'groupbox.qss', 'label.qss', 'lineedit.qss',
+    'listview.qss', 'listwidget.qss', 'loading_mask.qss', 'menu.qss',
+    'navbar.qss', 'navtree.qss', 'notification.qss', 'pagination.qss',
+    'popover.qss', 'progressbar.qss', 'pushbutton.qss', 'qdateedit.qss',
+    'qdatetimeedit.qss', 'qtimeedit.qss', 'radio.qss', 'scrollarea.qss',
+    'spinbox.qss', 'tablewidget.qss', 'tabwidget.qss', 'text_edit.qss',
+    'title_bar.qss', 'upload.qss', 'widget.qss',
+)
+
+
+def _list_qss_files(pkg: str) -> list:
+    """枚举包内 QSS 文件；zipimport 等无法枚举的环境回退到内置清单"""
+    try:
+        return [f for f in _resources.contents(pkg) if f.endswith('.qss')]
+    except OSError:
+        return list(_QSS_FILES)
+
 
 class QSSLoader:
     """QSS 文件加载器（优化版）
@@ -60,7 +84,7 @@ class QSSLoader:
             with open(file_path, 'r', encoding='utf-8') as f:
                 qss = f.read()
         else:
-            qss = _resources.read_text(f"{__package__}.qss", qss_file)
+            qss = _resources.read_text(f"{_RESOURCES_PKG}.qss", qss_file)
         
         # 替换变量（使用正则表达式一次性替换）
         if variables:
@@ -201,7 +225,7 @@ class QSSLoader:
         if self._qss_dir:
             qss_files = [f for f in os.listdir(self._qss_dir) if f.endswith('.qss')]
         else:
-            qss_files = [f for f in _resources.contents(f"{__package__}.qss") if f.endswith('.qss')]
+            qss_files = _list_qss_files(f"{_RESOURCES_PKG}.qss")
 
         # 检查 base.qss
         if 'base.qss' in qss_files:

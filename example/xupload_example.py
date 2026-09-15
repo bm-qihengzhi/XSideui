@@ -32,7 +32,7 @@ class XUploadDemo(XWidget):
         main_layout.addWidget(XLabel("XUpload 上传组件示例", style=XLabel.Style.H1))
         main_layout.addWidget(XLabel("上传组件、异步扫描、分批发出、多模式、格式大小限制", style=XLabel.Style.H4))
         upload = XUpload(
-            mode=XUpload.MODE_BOTH,
+            mode=XUpload.MODE_FOLDERS,
             mini_height=200,
             icon_size= 32,
             title='测试上次区域',

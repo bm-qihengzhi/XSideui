@@ -7,7 +7,7 @@ def read_file(filename):
 
 setup(
     name="xsideui",
-    version="1.0.0",
+    version="1.2.0",
     author="heng zhi qi",
     author_email="bmscriptsbox@163.com",
     description="A modern PySide2 / PySide6 component library with rich UI components and theme support",
