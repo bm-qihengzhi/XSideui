@@ -160,12 +160,7 @@ class XPushButton(QPushButton):
         super().showEvent(event)
         window = self.window().windowHandle()
         if window:
-            # 监听屏幕切换，强制刷新图标
-            try:
-                window.screenChanged.disconnect(self._on_dpi_changed)
-            except:
-                pass
-            window.screenChanged.connect(self._on_dpi_changed)
+            window.screenChanged.connect(self._on_dpi_changed, Qt.UniqueConnection)
 
     def _on_dpi_changed(self):
         # # 延迟刷新图标，确保 devicePixelRatioF() 已更新
